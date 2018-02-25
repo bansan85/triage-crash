@@ -83,6 +83,7 @@ int main(int argc, char *argv[]) {
   if (folder.length() != 0) {
     set_stack.AddRecursive(folder);
   } else {
+    set_stack.Add(filename);
   }
 
   set_stack.Print();
