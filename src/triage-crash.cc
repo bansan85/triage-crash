@@ -39,8 +39,8 @@ int main(int argc, char *argv[]) {
     } else if (strncmp(argv[i], "--top-frame=", sizeof("--top-frame=") - 1) ==
                0) {
       try {
-        top_frame =
-            std::stoi(&argv[i][sizeof("--top-frame=") - 1], nullptr, 10);
+        top_frame = static_cast<size_t>(
+            std::stoi(&argv[i][sizeof("--top-frame=") - 1], nullptr, 10));
       } catch (const std::invalid_argument &) {
         std::cerr << "Invalid argument for --top-frame" << std::endl;
         return 1;
@@ -48,8 +48,8 @@ int main(int argc, char *argv[]) {
     } else if (strncmp(argv[i],
                        "--bottom-frame=", sizeof("--bottom-frame=") - 1) == 0) {
       try {
-        bottom_frame =
-            std::stoi(&argv[i][sizeof("--bottom-frame=") - 1], nullptr, 10);
+        bottom_frame = static_cast<size_t>(
+            std::stoi(&argv[i][sizeof("--bottom-frame=") - 1], nullptr, 10));
       } catch (const std::invalid_argument &) {
         std::cerr << "Invalid argument for --bottom-frame" << std::endl;
         return 1;

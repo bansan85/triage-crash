@@ -3,4 +3,4 @@ mkdir build && cd build
 cmake -DINCLUDE_GDB=folder ..
 
 For example:
-cmake -DCMAKE_CXX_FLAGS="-march=native -O0 -ggdb2 -g2 -pipe -fno-omit-frame-pointer -Wall -Wextra" -DINCLUDE_GDB=~/info/programmation/2lgc/libgdb/inc -DLIBRARY_GDB=~/info/programmation/2lgc/libgdb/build/src ..
+cmake -DCMAKE_CXX_FLAGS="-march=native -O0 -ggdb2 -g2 -pipe -fno-omit-frame-pointer -Wall -Wextra" -DINCLUDE_GDB=~/info/programmation/2lgc/libgdb/inc -DLIBRARY_GDB=~/info/programmation/2lgc/libgdb/build/src -DCMAKE_MODULE_PATH=~/info/programmation/2lgc/cmake ..
