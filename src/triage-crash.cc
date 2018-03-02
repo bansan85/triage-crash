@@ -81,9 +81,16 @@ int main(int argc, char *argv[]) {
   SetStack set_stack(with_source_only, top_frame, bottom_frame);
 
   if (folder.length() != 0) {
-    set_stack.AddRecursive(folder);
+    if (!set_stack.AddRecursive(folder)) {
+      std::cerr << "Failed to read some files in " << folder << "."
+                << std::endl;
+      return 1;
+    }
   } else {
-    set_stack.Add(filename);
+    if (!set_stack.Add(filename)) {
+      std::cerr << "Failed to read " << filename << "." << std::endl;
+      return 1;
+    }
   }
 
   set_stack.Print();

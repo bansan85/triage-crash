@@ -6,6 +6,9 @@ endif()
 if (LIBRARY_GDB)
         link_directories(${LIBRARY_GDB})
 endif()
+if (INCLUDE_HEADER)
+        include_directories(${INCLUDE_HEADER})
+endif()
 
 find_package(Threads)
 
