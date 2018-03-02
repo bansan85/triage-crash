@@ -21,23 +21,59 @@
 
 // C++ system
 #include <cstring>
+#include <experimental/filesystem>
 #include <iostream>
 
 // lib2lgcgdb
 #include <set_stack.h>
 
+// gdb -batch-silent -ex "run" -ex "set logging overwrite on" -ex "set logging
+// file $2.btfull" -ex "set logging on" -ex "set pagination off" -ex "handle
+// SIG33 pass nostop noprint" -ex "backtrace full" -ex "set logging off" -ex
+// "quit" --args $@
+
+enum class Action { NONE, GDB, SORT };
+
 int main(int argc, char *argv[]) {
-  std::string filename, folder;
+  std::vector<std::string> filenames, folders;
   bool with_source_only = false;
+  bool parallel = false;
   size_t top_frame = std::numeric_limits<size_t>::max();
   size_t bottom_frame = std::numeric_limits<size_t>::max();
+  Action action = Action::NONE;
 
   for (int i = 1; i < argc; i++) {
     // Filename
-    if (strcmp(argv[i], "--source-only") == 0) {
+    if (strcmp(argv[i], "gdb") == 0) {
+      if (action != Action::NONE) {
+        std::cerr
+            << "Only one action at a time (gdb or sort) must be specified.\n";
+        return 1;
+      }
+      action = Action::GDB;
+    } else if (strcmp(argv[i], "sort") == 0) {
+      if (action != Action::NONE) {
+        std::cerr
+            << "Only one action at a time (gdb or sort) must be specified.\n";
+        return 1;
+      }
+      action = Action::SORT;
+    } else if (strcmp(argv[i], "--source-only") == 0) {
+      if (action != Action::SORT)
+      {
+        std::cerr << "--source-only is only applicable with sort action. See --help.\n";
+        return 1;
+      }
       with_source_only = true;
+    } else if (strcmp(argv[i], "--parallel") == 0) {
+      parallel = true;
     } else if (strncmp(argv[i], "--top-frame=", sizeof("--top-frame=") - 1) ==
                0) {
+      if (action != Action::SORT)
+      {
+        std::cerr << "--top-frame is only applicable with sort action. See --help.\n";
+        return 1;
+      }
       try {
         top_frame = static_cast<size_t>(
             std::stoi(&argv[i][sizeof("--top-frame=") - 1], nullptr, 10));
@@ -47,6 +83,11 @@ int main(int argc, char *argv[]) {
       }
     } else if (strncmp(argv[i],
                        "--bottom-frame=", sizeof("--bottom-frame=") - 1) == 0) {
+      if (action != Action::SORT)
+      {
+        std::cerr << "--bottom-frame is only applicable with sort action. See --help.\n";
+        return 1;
+      }
       try {
         bottom_frame = static_cast<size_t>(
             std::stoi(&argv[i][sizeof("--bottom-frame=") - 1], nullptr, 10));
@@ -55,45 +96,85 @@ int main(int argc, char *argv[]) {
         return 1;
       }
     } else if (strncmp(argv[i], "--folder=", sizeof("--folder=") - 1) == 0) {
-      folder.assign(&argv[i][sizeof("--folder=") - 1]);
+      if (action == Action::NONE)
+      {
+        std::cerr << "--folder is only applicable with an action. See --help.\n";
+        return 1;
+      }
+      folders.push_back(&argv[i][sizeof("--folder=") - 1]);
     } else if (strcmp(argv[i], "--help") == 0) {
       std::cout
-          << "Usage: triage-crash [option] folder\n"
+          << "Usage:  triage-crash --help\n"
+             "        triage-crash gdb [options] <--file=file folder=folder>\n"
+             "        triage-crash sort [options] <--file=file folder=folder>\n"
              "\n"
-             "  --source-only Ignore frames that don't have known source "
-             "file.\n"
+             "  --help  This help.\n"
              "\n"
-             "  --top-frame=number Maximum number of frames to compare with,\n"
-             "                     starting from the top. 2^32 by default.\n"
+             "Action:\n"
+             "  gdb   Run gdb with files to extract full backtrace (.btfull).\n"
+             "  sort  Sort btfull files and show result by group.\n"
              "\n"
-             "  --bottom-frame=number Maximum number of frames to compare "
+             "Common options:\n"
+             "  --parallel  Read folder with the number of threads that allow "
+             "the CPU.\n"
+             "              Default false.\n"
+             "\n"
+             "Options for sort:\n"
+             "  --source-only          Ignore frames that don't have known "
+             "source file.\n"
+             "  --top-frame=number     Maximum number of frames to compare "
              "with,\n"
-             "                        starting from the bottom. 2^32 by "
+             "                         starting from the top. 2^32 by default.\n"
+             "  --bottom-frame=number  Maximum number of frames to compare "
+             "with,\n"
+             "                         starting from the bottom. 2^32 by "
              "default.\n"
              "\n"
-             "  --folder=directory Folder that contains all *.btfull file.";
+             "Files:\n"
+             "  --folder=directory  Folder that contains all *.btfull file.\n"
+             "                      Add as many --folder you want.\n"
+             "  --file=file         Add a single file. Add as many --file you "
+             "want.\n"
+             "\n";
       return 1;
+    } else if (strncmp(argv[i], "--file=", sizeof("--file=") - 1) == 0) {
+      if (action == Action::NONE)
+      {
+        std::cerr << "--file is only applicable with an action. See --help.\n";
+        return 1;
+      }
+      filenames.push_back(&argv[i][sizeof("--file=") - 1]);
     } else {
-      filename.assign(argv[i]);
-    }
-  }
-
-  SetStack set_stack(with_source_only, top_frame, bottom_frame);
-
-  if (folder.length() != 0) {
-    if (!set_stack.AddRecursive(folder)) {
-      std::cerr << "Failed to read some files in " << folder << "."
-                << std::endl;
-      return 1;
-    }
-  } else {
-    if (!set_stack.Add(filename)) {
-      std::cerr << "Failed to read " << filename << "." << std::endl;
+      std::cerr << "Invalid argument: " << argv[i]
+                << ".\n"
+                   "Run triage-crash with --help.\n";
       return 1;
     }
   }
 
-  set_stack.Print();
+  if (action == Action::SORT) {
+    SetStack set_stack(with_source_only, top_frame, bottom_frame);
+
+    const unsigned int nthreads =
+        parallel ? std::numeric_limits<unsigned int>::max() : 1;
+
+    for (const std::string &folder : folders) {
+      if (!set_stack.AddRecursive(folder, nthreads)) {
+        std::cerr << "Failed to read some files in " << folder << "."
+                  << std::endl;
+        return 1;
+      }
+    }
+    for (const std::string &filename : filenames) {
+      if (!set_stack.Add(filename)) {
+        std::cerr << "Failed to read " << filename << "." << std::endl;
+        return 1;
+      }
+    }
+
+    set_stack.Print();
+  } else if (action == Action::GDB) {
+  }
 
   return 0;
 }
