@@ -14,4 +14,4 @@ include(2lgc)
 add_subdirectory(src)
 
 file(GLOB_RECURSE ALL_SOURCE_FILES *.cc *.h)
-add_custom_target(check COMMAND clang-format -style=Google -i ${ALL_SOURCE_FILES})
+add_custom_target(check COMMAND clang-format -style='{BasedOnStyle: google, BreakBeforeBraces: Custom, BraceWrapping: { AfterClass: true, AfterControlStatement: true, AfterEnum : true, AfterFunction : true, AfterNamespace : true, AfterObjCDeclaration: true, AfterStruct : true, AfterUnion : true, BeforeCatch : true, BeforeElse : true, IndentBraces : false } }' -i ${ALL_SOURCE_FILES})

@@ -32,9 +32,15 @@
 // SIG33 pass nostop noprint" -ex "backtrace full" -ex "set logging off" -ex
 // "quit" --args $@
 
-enum class Action { NONE, GDB, SORT };
+enum class Action
+{
+  NONE,
+  GDB,
+  SORT
+};
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
   std::vector<std::string> filenames, folders;
   bool with_source_only = false;
   bool parallel = false;
@@ -43,74 +49,104 @@ int main(int argc, char *argv[]) {
   Action action = Action::NONE;
   std::string regex;
 
-  for (int i = 1; i < argc; i++) {
+  for (int i = 1; i < argc; i++)
+  {
     // Filename
-    if (strcmp(argv[i], "gdb") == 0) {
-      if (action != Action::NONE) {
+    if (strcmp(argv[i], "gdb") == 0)
+    {
+      if (action != Action::NONE)
+      {
         std::cerr
             << "Only one action at a time (gdb or sort) must be specified.\n";
         return 1;
       }
       action = Action::GDB;
-    } else if (strcmp(argv[i], "sort") == 0) {
-      if (action != Action::NONE) {
+    }
+    else if (strcmp(argv[i], "sort") == 0)
+    {
+      if (action != Action::NONE)
+      {
         std::cerr
             << "Only one action at a time (gdb or sort) must be specified.\n";
         return 1;
       }
       action = Action::SORT;
-    } else if (strcmp(argv[i], "--source-only") == 0) {
-      if (action != Action::SORT) {
+    }
+    else if (strcmp(argv[i], "--source-only") == 0)
+    {
+      if (action != Action::SORT)
+      {
         std::cerr << "--source-only is only applicable with sort action. See "
                      "--help.\n";
         return 1;
       }
       with_source_only = true;
-    } else if (strcmp(argv[i], "--parallel") == 0) {
+    }
+    else if (strcmp(argv[i], "--parallel") == 0)
+    {
       parallel = true;
-    } else if (strncmp(argv[i], "--regex=", sizeof("--regex=") - 1) == 0) {
-      if (action == Action::NONE) {
+    }
+    else if (strncmp(argv[i], "--regex=", sizeof("--regex=") - 1) == 0)
+    {
+      if (action == Action::NONE)
+      {
         std::cerr
             << "--regex= is only applicable with an action. See --help.\n";
         return 1;
       }
       regex.assign(&argv[i][sizeof("--regex=") - 1]);
-    } else if (strncmp(argv[i], "--top-frame=", sizeof("--top-frame=") - 1) ==
-               0) {
-      if (action != Action::SORT) {
+    }
+    else if (strncmp(argv[i], "--top-frame=", sizeof("--top-frame=") - 1) == 0)
+    {
+      if (action != Action::SORT)
+      {
         std::cerr
             << "--top-frame is only applicable with sort action. See --help.\n";
         return 1;
       }
-      try {
+      try
+      {
         top_frame = static_cast<size_t>(
             std::stoi(&argv[i][sizeof("--top-frame=") - 1], nullptr, 10));
-      } catch (const std::invalid_argument &) {
+      }
+      catch (const std::invalid_argument &)
+      {
         std::cerr << "Invalid argument for --top-frame" << std::endl;
         return 1;
       }
-    } else if (strncmp(argv[i],
-                       "--bottom-frame=", sizeof("--bottom-frame=") - 1) == 0) {
-      if (action != Action::SORT) {
+    }
+    else if (strncmp(argv[i],
+                     "--bottom-frame=", sizeof("--bottom-frame=") - 1) == 0)
+    {
+      if (action != Action::SORT)
+      {
         std::cerr << "--bottom-frame is only applicable with sort action. See "
                      "--help.\n";
         return 1;
       }
-      try {
+      try
+      {
         bottom_frame = static_cast<size_t>(
             std::stoi(&argv[i][sizeof("--bottom-frame=") - 1], nullptr, 10));
-      } catch (const std::invalid_argument &) {
+      }
+      catch (const std::invalid_argument &)
+      {
         std::cerr << "Invalid argument for --bottom-frame" << std::endl;
         return 1;
       }
-    } else if (strncmp(argv[i], "--folder=", sizeof("--folder=") - 1) == 0) {
-      if (action == Action::NONE) {
+    }
+    else if (strncmp(argv[i], "--folder=", sizeof("--folder=") - 1) == 0)
+    {
+      if (action == Action::NONE)
+      {
         std::cerr
             << "--folder is only applicable with an action. See --help.\n";
         return 1;
       }
       folders.push_back(&argv[i][sizeof("--folder=") - 1]);
-    } else if (strcmp(argv[i], "--help") == 0) {
+    }
+    else if (strcmp(argv[i], "--help") == 0)
+    {
       std::cout
           << "Usage:  triage-crash --help\n"
              "        triage-crash gdb [options] <--file=file folder=folder>\n"
@@ -162,13 +198,18 @@ int main(int argc, char *argv[]) {
              "want.\n"
              "\n";
       return 1;
-    } else if (strncmp(argv[i], "--file=", sizeof("--file=") - 1) == 0) {
-      if (action == Action::NONE) {
+    }
+    else if (strncmp(argv[i], "--file=", sizeof("--file=") - 1) == 0)
+    {
+      if (action == Action::NONE)
+      {
         std::cerr << "--file is only applicable with an action. See --help.\n";
         return 1;
       }
       filenames.push_back(&argv[i][sizeof("--file=") - 1]);
-    } else {
+    }
+    else
+    {
       std::cerr << "Invalid argument: " << argv[i]
                 << ".\n"
                    "Run triage-crash with --help.\n";
@@ -176,28 +217,35 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  if (action == Action::SORT) {
+  if (action == Action::SORT)
+  {
     SetStack set_stack(with_source_only, top_frame, bottom_frame);
 
     const unsigned int nthreads =
         parallel ? std::numeric_limits<unsigned int>::max() : 1;
 
-    for (const std::string &folder : folders) {
-      if (!set_stack.AddRecursive(folder, nthreads, regex)) {
+    for (const std::string &folder : folders)
+    {
+      if (!set_stack.AddRecursive(folder, nthreads, regex))
+      {
         std::cerr << "Failed to read some files in " << folder << "."
                   << std::endl;
         return 1;
       }
     }
-    for (const std::string &filename : filenames) {
-      if (!set_stack.Add(filename)) {
+    for (const std::string &filename : filenames)
+    {
+      if (!set_stack.Add(filename))
+      {
         std::cerr << "Failed to read " << filename << "." << std::endl;
         return 1;
       }
     }
 
     set_stack.Print();
-  } else if (action == Action::GDB) {
+  }
+  else if (action == Action::GDB)
+  {
   }
 
   return 0;
