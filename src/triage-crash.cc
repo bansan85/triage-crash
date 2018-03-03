@@ -41,6 +41,7 @@ int main(int argc, char *argv[]) {
   size_t top_frame = std::numeric_limits<size_t>::max();
   size_t bottom_frame = std::numeric_limits<size_t>::max();
   Action action = Action::NONE;
+  std::string regex;
 
   for (int i = 1; i < argc; i++) {
     // Filename
@@ -59,19 +60,26 @@ int main(int argc, char *argv[]) {
       }
       action = Action::SORT;
     } else if (strcmp(argv[i], "--source-only") == 0) {
-      if (action != Action::SORT)
-      {
-        std::cerr << "--source-only is only applicable with sort action. See --help.\n";
+      if (action != Action::SORT) {
+        std::cerr << "--source-only is only applicable with sort action. See "
+                     "--help.\n";
         return 1;
       }
       with_source_only = true;
     } else if (strcmp(argv[i], "--parallel") == 0) {
       parallel = true;
+    } else if (strncmp(argv[i], "--regex=", sizeof("--regex=") - 1) == 0) {
+      if (action == Action::NONE) {
+        std::cerr
+            << "--regex= is only applicable with an action. See --help.\n";
+        return 1;
+      }
+      regex.assign(&argv[i][sizeof("--regex=") - 1]);
     } else if (strncmp(argv[i], "--top-frame=", sizeof("--top-frame=") - 1) ==
                0) {
-      if (action != Action::SORT)
-      {
-        std::cerr << "--top-frame is only applicable with sort action. See --help.\n";
+      if (action != Action::SORT) {
+        std::cerr
+            << "--top-frame is only applicable with sort action. See --help.\n";
         return 1;
       }
       try {
@@ -83,9 +91,9 @@ int main(int argc, char *argv[]) {
       }
     } else if (strncmp(argv[i],
                        "--bottom-frame=", sizeof("--bottom-frame=") - 1) == 0) {
-      if (action != Action::SORT)
-      {
-        std::cerr << "--bottom-frame is only applicable with sort action. See --help.\n";
+      if (action != Action::SORT) {
+        std::cerr << "--bottom-frame is only applicable with sort action. See "
+                     "--help.\n";
         return 1;
       }
       try {
@@ -96,9 +104,9 @@ int main(int argc, char *argv[]) {
         return 1;
       }
     } else if (strncmp(argv[i], "--folder=", sizeof("--folder=") - 1) == 0) {
-      if (action == Action::NONE)
-      {
-        std::cerr << "--folder is only applicable with an action. See --help.\n";
+      if (action == Action::NONE) {
+        std::cerr
+            << "--folder is only applicable with an action. See --help.\n";
         return 1;
       }
       folders.push_back(&argv[i][sizeof("--folder=") - 1]);
@@ -111,20 +119,37 @@ int main(int argc, char *argv[]) {
              "  --help  This help.\n"
              "\n"
              "Action:\n"
-             "  gdb   Run gdb with files to extract full backtrace (.btfull).\n"
+             "  gdb   Run gdb with files to extract full backtrace.\n"
              "  sort  Sort btfull files and show result by group.\n"
              "\n"
              "Common options:\n"
-             "  --parallel  Read folder with the number of threads that allow "
+             "  --parallel   Read folder with the number of threads that allow "
              "the CPU.\n"
-             "              Default false.\n"
+             "               Default false.\n"
+             "  --regex=str  With --folder only. Read only files that match "
+             "str.\n"
+             "               str is used in the C++ function std::regex_match "
+             "without any\n"
+             "               changes.\n"
+             "               * With gdb action and afl's crashes, you can use\n"
+             "               --regex=^id(?!.*btfull).*$ (all files that starts "
+             "with id and\n"
+             "               not ends with .btfull). From bash, use:\n"
+             "               --regex=^id\\(?\\!.*btfull\\).*$\n"
+             "               * With sort action and afl's crashes, you "
+             "can use\n"
+             "               --regex=^id.*\\.btfull$ (all files that starts "
+             "with id and\n"
+             "               ends with .btfull)\n"
              "\n"
              "Options for sort:\n"
              "  --source-only          Ignore frames that don't have known "
              "source file.\n"
+             "                         By default: not ignore.\n"
              "  --top-frame=number     Maximum number of frames to compare "
              "with,\n"
-             "                         starting from the top. 2^32 by default.\n"
+             "                         starting from the top. 2^32 by "
+             "default.\n"
              "  --bottom-frame=number  Maximum number of frames to compare "
              "with,\n"
              "                         starting from the bottom. 2^32 by "
@@ -138,8 +163,7 @@ int main(int argc, char *argv[]) {
              "\n";
       return 1;
     } else if (strncmp(argv[i], "--file=", sizeof("--file=") - 1) == 0) {
-      if (action == Action::NONE)
-      {
+      if (action == Action::NONE) {
         std::cerr << "--file is only applicable with an action. See --help.\n";
         return 1;
       }
@@ -159,7 +183,7 @@ int main(int argc, char *argv[]) {
         parallel ? std::numeric_limits<unsigned int>::max() : 1;
 
     for (const std::string &folder : folders) {
-      if (!set_stack.AddRecursive(folder, nthreads)) {
+      if (!set_stack.AddRecursive(folder, nthreads, regex)) {
         std::cerr << "Failed to read some files in " << folder << "."
                   << std::endl;
         return 1;
