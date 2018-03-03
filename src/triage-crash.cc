@@ -45,6 +45,7 @@ int main(int argc, char *argv[])
   std::vector<std::string> filenames, folders;
   bool with_source_only = false;
   bool parallel = false;
+  bool print_one_by_group = false;
   size_t top_frame = std::numeric_limits<size_t>::max();
   size_t bottom_frame = std::numeric_limits<size_t>::max();
   Action action = Action::NONE;
@@ -136,6 +137,16 @@ int main(int argc, char *argv[])
         return 1;
       }
     }
+    else if (strcmp(argv[i], "--print-one-by-group") == 0)
+    {
+      if (action != Action::SORT)
+      {
+        std::cerr << "--print-one-by-group is only applicable with sort "
+                     "action. See --help.\n";
+        return 1;
+      }
+      print_one_by_group = true;
+    }
     else if (strncmp(argv[i], "--folder=", sizeof("--folder=") - 1) == 0)
     {
       if (action == Action::NONE)
@@ -191,6 +202,7 @@ int main(int argc, char *argv[])
              "with,\n"
              "                         starting from the bottom. 2^32 by "
              "default.\n"
+             "  --print-one-by-group   Show only one btfull file by group.\n"
              "\n"
              "Files:\n"
              "  --folder=directory  Folder that contains all *.btfull file.\n"
@@ -243,7 +255,7 @@ int main(int argc, char *argv[])
       }
     }
 
-    set_stack.Print();
+    set_stack.Print(print_one_by_group);
   }
   else if (action == Action::GDB)
   {
