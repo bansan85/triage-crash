@@ -19,14 +19,13 @@
  * SOFTWARE.
  */
 
-// lib2lgcgdb
 #include <set_stack.h>
-
-#include <experimental/filesystem>
-
-// C++ system
 #include <cstring>
 #include <iostream>
+#include <limits>
+#include <stdexcept>
+#include <string>
+#include <vector>
 
 // gdb -batch-silent -ex "run" -ex "set logging overwrite on" -ex "set logging
 // file $2.btfull" -ex "set logging on" -ex "set pagination off" -ex "handle
@@ -161,8 +160,10 @@ int main(int argc, char *argv[])
     {
       std::cout
           << "Usage:  triage-crash --help\n"
-             "        triage-crash gdb [options] <--file=file folder=folder>\n"
-             "        triage-crash sort [options] <--file=file folder=folder>\n"
+             "        triage-crash gdb [options] <--file=file folder=dir> -- "
+             "/path/app @@\n"
+             "        @@ will be replaced by the file.\n"
+             "        triage-crash sort [options] <--file=file folder=dir>\n"
              "\n"
              "  --help  This help.\n"
              "\n"
@@ -230,12 +231,12 @@ int main(int argc, char *argv[])
     }
   }
 
+  const unsigned int nthreads =
+      parallel ? std::numeric_limits<unsigned int>::max() : 1;
+
   if (action == Action::SORT)
   {
     SetStack set_stack(with_source_only, top_frame, bottom_frame);
-
-    const unsigned int nthreads =
-        parallel ? std::numeric_limits<unsigned int>::max() : 1;
 
     for (const std::string &folder : folders)
     {
