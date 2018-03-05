@@ -41,8 +41,8 @@ int main(int argc, char *argv[])
   bool with_source_only = false;
   bool parallel = false;
   bool print_one_by_group = false;
-  size_t top_frame = std::numeric_limits<size_t>::max();
-  size_t bottom_frame = std::numeric_limits<size_t>::max();
+  size_t top_frame = 10000;
+  size_t bottom_frame = 0;
   Action action = Action::NONE;
   std::string regex;
 
@@ -203,11 +203,11 @@ int main(int argc, char *argv[])
              "                         By default: not ignore.\n"
              "  --top-frame=number     Maximum number of frames to compare "
              "with,\n"
-             "                         starting from the top. 2^32 by "
+             "                         starting from the top. 10000 by "
              "default.\n"
              "  --bottom-frame=number  Maximum number of frames to compare "
              "with,\n"
-             "                         starting from the bottom. 2^32 by "
+             "                         starting from the bottom. 0 by "
              "default.\n"
              "  --print-one-by-group   Show only one btfull file by group.\n"
              "\n"
