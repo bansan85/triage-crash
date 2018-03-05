@@ -19,6 +19,7 @@
  * SOFTWARE.
  */
 
+#include <gdb.h>
 #include <set_stack.h>
 #include <cstring>
 #include <iostream>
@@ -26,11 +27,6 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
-
-// gdb -batch-silent -ex "run" -ex "set logging overwrite on" -ex "set logging
-// file $2.btfull" -ex "set logging on" -ex "set pagination off" -ex "handle
-// SIG33 pass nostop noprint" -ex "backtrace full" -ex "set logging off" -ex
-// "quit" --args $@
 
 enum class Action
 {
@@ -50,7 +46,8 @@ int main(int argc, char *argv[])
   Action action = Action::NONE;
   std::string regex;
 
-  for (int i = 1; i < argc; i++)
+  int i;
+  for (i = 1; i < argc; i++)
   {
     // Filename
     if (strcmp(argv[i], "gdb") == 0)
@@ -62,6 +59,15 @@ int main(int argc, char *argv[])
         return 1;
       }
       action = Action::GDB;
+    }
+    else if (strcmp(argv[i], "--") == 0)
+    {
+      if (action != Action::GDB)
+      {
+        std::cerr << "-- is only applicable with gdb action. See --help.\n";
+        return 1;
+      }
+      break;
     }
     else if (strcmp(argv[i], "sort") == 0)
     {
@@ -260,6 +266,53 @@ int main(int argc, char *argv[])
   }
   else if (action == Action::GDB)
   {
+    if (i == argc)
+    {
+      std::cerr << "Missing -- to know what application to run under gdb."
+                << std::endl;
+      return 1;
+    }
+    else if (i == argc - 1)
+    {
+      std::cerr << "Missing application to run under gdb after -- ."
+                << std::endl;
+      return 1;
+    }
+
+    int j;
+    for (j = i + 1; j < argc; j++)
+    {
+      if (strcmp(argv[j], "@@") == 0)
+      {
+        break;
+      }
+    }
+    if (j == argc)
+    {
+      std::cerr << "Missing @@ in the arguments." << std::endl;
+      return 1;
+    }
+
+    for (const std::string &folder : folders)
+    {
+      if (!Gdb::RunBtFullRecursive(folder, nthreads, regex,
+                                   static_cast<unsigned int>(argc - i - 1),
+                                   &argv[i + 1]))
+      {
+        std::cerr << "Failed to run gdb with some files in " << folder << "."
+                  << std::endl;
+        return 1;
+      }
+    }
+    for (const std::string &filename : filenames)
+    {
+      if (!Gdb::RunBtFull(filename, static_cast<unsigned int>(argc - i - 1),
+                          &argv[i + 1]))
+      {
+        std::cerr << "Failed to read " << filename << "." << std::endl;
+        return 1;
+      }
+    }
   }
 
   return 0;
