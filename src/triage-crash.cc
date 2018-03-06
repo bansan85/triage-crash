@@ -210,6 +210,7 @@ int main(int argc, char *argv[])
              "                         starting from the bottom. 0 by "
              "default.\n"
              "  --print-one-by-group   Show only one btfull file by group.\n"
+             "                         Reduce memory usage.\n"
              "\n"
              "Files:\n"
              "  --folder=directory  Folder that contains all *.btfull file.\n"
@@ -246,7 +247,7 @@ int main(int argc, char *argv[])
 
     for (const std::string &folder : folders)
     {
-      if (!set_stack.AddRecursive(folder, nthreads, regex))
+      if (!set_stack.AddRecursive(folder, nthreads, regex, print_one_by_group))
       {
         std::cerr << "Failed to read some files in " << folder << "."
                   << std::endl;
@@ -255,14 +256,14 @@ int main(int argc, char *argv[])
     }
     for (const std::string &filename : filenames)
     {
-      if (!set_stack.Add(filename))
+      if (!set_stack.Add(filename, print_one_by_group))
       {
         std::cerr << "Failed to read " << filename << "." << std::endl;
         return 1;
       }
     }
 
-    set_stack.Print(print_one_by_group);
+    set_stack.Print();
   }
   else if (action == Action::GDB)
   {
