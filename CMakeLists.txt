@@ -2,15 +2,13 @@ cmake_minimum_required(VERSION 3.8.0)
 
 project(triage-crash)
 
-set(LIB2LGC)
-set(CHECK_CODE)
+set(LIB2LGC "${CMAKE_BINARY_DIR}" CACHE STRING "Folder where all submodules are.")
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-if (LIB2LGC)
-  set(CMAKE_MODULE_PATH "${LIB2LGC}/utils/cmake;${CMAKE_MODULE_PATH}")
-endif()
 
+execute_process(COMMAND git clone https://github.com/bansan85/2lgcutils.git ${CMAKE_BINARY_DIR}/utils)
+set(CMAKE_MODULE_PATH "${CMAKE_BINARY_DIR}/utils/cmake;${CMAKE_MODULE_PATH}")
 include(2lgc)
 
 if (CHECK_CODE)
@@ -19,9 +17,31 @@ if (CHECK_CODE)
     message(FATAL_ERROR "Could not find the program include-what-you-use")
   endif()
   if (LIB2LGC)
-    set(CMAKE_CXX_INCLUDE_WHAT_YOU_USE ${iwyu_path} -Xiwyu --mapping_file=${LIB2LGC}/utils/iwyu/mapping.imp)
+    set(CMAKE_CXX_INCLUDE_WHAT_YOU_USE ${iwyu_path} -Xiwyu --mapping_file=${CMAKE_BINARY_DIR}/utils/mapping.imp)
   endif()
 endif()
+
+include(ExternalProject)
+
+ExternalProject_Add(libheader
+  GIT_REPOSITORY https://github.com/bansan85/lib2lgcheader.git
+  GIT_TAG master
+  SOURCE_DIR ${CMAKE_BINARY_DIR}/libheader
+  BINARY_DIR ${CMAKE_BINARY_DIR}/libheader-build
+  BUILD_COMMAND ""
+  TEST_COMMAND ""
+  INSTALL_COMMAND ""
+)
+
+ExternalProject_Add(libgdb
+  GIT_REPOSITORY https://github.com/bansan85/lib2lgcgdb.git
+  GIT_TAG master
+  SOURCE_DIR ${CMAKE_BINARY_DIR}/libgdb
+  BINARY_DIR ${CMAKE_BINARY_DIR}/libgdb-build
+  CMAKE_ARGS -DLIB2LGC=${CMAKE_BINARY_DIR}
+  TEST_COMMAND make check
+  INSTALL_COMMAND ""
+)
 
 add_subdirectory(src)
 

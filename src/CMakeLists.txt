@@ -1,8 +1,6 @@
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../inc)
-
 if (LIB2LGC)
   include_directories(${LIB2LGC}/libgdb/inc ${LIB2LGC}/libheader/inc)
-  link_directories(${LIB2LGC}/libgdb/build/src)
+  link_directories(${LIB2LGC}/libgdb-build/src)
 endif()
 
 find_package(Threads)
