@@ -17,7 +17,7 @@ if (CHECK_CODE)
     message(FATAL_ERROR "Could not find the program include-what-you-use")
   endif()
   if (LIB2LGC)
-    set(CMAKE_CXX_INCLUDE_WHAT_YOU_USE ${iwyu_path} -Xiwyu --mapping_file=${CMAKE_BINARY_DIR}/utils/mapping.imp)
+    set(CMAKE_CXX_INCLUDE_WHAT_YOU_USE ${iwyu_path} -Xiwyu --mapping_file=${CMAKE_BINARY_DIR}/utils/iwyu/mapping.imp)
   endif()
 endif()
 
@@ -34,12 +34,13 @@ ExternalProject_Add(libheader
 )
 
 ExternalProject_Add(libgdb
+  DEPENDS libheader
   GIT_REPOSITORY https://github.com/bansan85/lib2lgcgdb.git
   GIT_TAG master
   SOURCE_DIR ${CMAKE_BINARY_DIR}/libgdb
   BINARY_DIR ${CMAKE_BINARY_DIR}/libgdb-build
   CMAKE_ARGS -DLIB2LGC=${CMAKE_BINARY_DIR}
-  TEST_COMMAND make check
+  TEST_COMMAND $(MAKE) check
   INSTALL_COMMAND ""
 )
 
