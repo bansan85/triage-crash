@@ -41,6 +41,7 @@ int main(int argc, char *argv[])
   bool with_source_only = false;
   bool parallel = false;
   bool print_one_by_group = false;
+  int64_t timeout = std::numeric_limits<int64_t>::max();
   size_t top_frame = 10000;
   size_t bottom_frame = 0;
   Action action = Action::NONE;
@@ -162,6 +163,16 @@ int main(int argc, char *argv[])
       }
       folders.push_back(&argv[i][sizeof("--folder=") - 1]);
     }
+    else if (strncmp(argv[i], "--timeout=", sizeof("--timeout=") - 1) == 0)
+    {
+      if (action != Action::GDB)
+      {
+        std::cerr
+            << "--timeout is only applicable with gdb action. See --help.\n";
+        return 1;
+      }
+      timeout = std::stoll(&argv[i][sizeof("--timeout=") - 1]);
+    }
     else if (strcmp(argv[i], "--help") == 0)
     {
       std::cout
@@ -194,6 +205,11 @@ int main(int argc, char *argv[])
              "               --regex=^id.*\\.btfull$ (all files that starts "
              "with id and\n"
              "               ends with .btfull)\n"
+             "\n"
+             "Options for gdb:\n"
+             "  --timeout=time  Timeout in second for execution of each gdb "
+             "instance.\n"
+             "                  Max 2^61.\n"
              "\n"
              "Options for sort:\n"
              "  --source-only          Ignore frames that don't have known "
@@ -296,7 +312,7 @@ int main(int argc, char *argv[])
     {
       if (!Gdb::RunBtFullRecursive(folder, nthreads, regex,
                                    static_cast<unsigned int>(argc - i - 1),
-                                   &argv[i + 1]))
+                                   &argv[i + 1], timeout))
       {
         std::cerr << "Failed to run gdb with some files in " << folder << "."
                   << std::endl;
@@ -306,7 +322,7 @@ int main(int argc, char *argv[])
     for (const std::string &filename : filenames)
     {
       if (!Gdb::RunBtFull(filename, static_cast<unsigned int>(argc - i - 1),
-                          &argv[i + 1]))
+                          &argv[i + 1], timeout))
       {
         std::cerr << "Failed to read " << filename << "." << std::endl;
         return 1;

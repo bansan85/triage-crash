@@ -3,5 +3,5 @@ mkdir build && cd build
 cmake -DINCLUDE_GDB=folder ..
 
 For example:
-cmake -DCHECK_CODE=1 -DCMAKE_CXX_FLAGS="-march=native -O0 -ggdb2 -g2 -pipe -fno-omit-frame-pointer -Wall -Wextra" ..
-CXX=afl-clang++ cmake -DCMAKE_EXE_LINKER_FLAGS="-lgcc_s" -DCMAKE_CXX_FLAGS="-march=native -O0 -ggdb2 -g2 -pipe -fno-omit-frame-pointer -Wall -Wextra" ..
+cmake -DCHECK_CODE=1 -DLIB2LGC=/home/legarrec/info/programmation/2lgc -DCMAKE_CXX_FLAGS="-march=native -O0 -ggdb2 -g2 -pipe -fno-omit-frame-pointer" ..
+CXX=afl-clang++ cmake -DCMAKE_EXE_LINKER_FLAGS="-lgcc_s" -DCMAKE_CXX_FLAGS="-march=native -O0 -ggdb2 -g2 -pipe -fno-omit-frame-pointer" ..
