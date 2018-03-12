@@ -50,13 +50,12 @@ int main(int argc, char *argv[])
   int i;
   for (i = 1; i < argc; i++)
   {
-    // Filename
     if (strcmp(argv[i], "gdb") == 0)
     {
       if (action != Action::NONE)
       {
         std::cerr
-            << "Only one action at a time (gdb or sort) must be specified.\n";
+            << "Only one action at a time (gdb or sort) can be specified.\n";
         return 1;
       }
       action = Action::GDB;
@@ -194,7 +193,8 @@ int main(int argc, char *argv[])
              "               Default false.\n"
              "  --regex=str  With --folder only. Read only files that match "
              "str.\n"
-             "               Must be compliant with ECMAScript (javascript)."
+             "               If empty (by default), all files are read.\n"
+             "               Must be compliant with ECMAScript (javascript).\n"
              "               * With gdb action and afl's crashes, you can use\n"
              "               --regex=^id(?!.*btfull).*$ (all files that starts "
              "with id and\n"
