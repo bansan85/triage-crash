@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
   bool with_source_only = false;
   bool parallel = false;
   bool print_one_by_group = false;
-  int64_t timeout = std::numeric_limits<int64_t>::max();
+  int64_t timeout = 120;
   size_t top_frame = 10000;
   size_t bottom_frame = 0;
   Action action = Action::NONE;
@@ -209,7 +209,7 @@ int main(int argc, char *argv[])
              "Options for gdb:\n"
              "  --timeout=time  Timeout in second for execution of each gdb "
              "instance.\n"
-             "                  Max 2^61.\n"
+             "                  By default: 120s. Max: 2^61s.\n"
              "\n"
              "Options for sort:\n"
              "  --source-only          Ignore frames that don't have known "
