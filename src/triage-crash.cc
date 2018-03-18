@@ -19,8 +19,9 @@
  * SOFTWARE.
  */
 
-#include <gdb.h>
-#include <set_stack.h>
+#include <2lgc/software/gdb/gdb.h>
+#include <2lgc/software/gdb/set_stack.h>
+#include <bits/stdint-intn.h>
 #include <cstring>
 #include <iostream>
 #include <limits>
@@ -37,7 +38,7 @@ enum class Action
 
 int main(int argc, char *argv[])
 {
-  std::vector<std::string> filenames, folders;
+  std::vector<std::string> filenames, folders, lists;
   bool with_source_only = false;
   bool parallel = false;
   bool print_one_by_group = false;
@@ -231,7 +232,8 @@ int main(int argc, char *argv[])
              "                      Add as many --folder you want.\n"
              "  --file=file         Add a single file. Add as many --file you "
              "want.\n"
-             "\n";
+             "  --list=file         Add many files from a text file. --regex is"
+             " not used.\n";
       return 1;
     }
     else if (strncmp(argv[i], "--file=", sizeof("--file=") - 1) == 0)
@@ -242,6 +244,15 @@ int main(int argc, char *argv[])
         return 1;
       }
       filenames.push_back(&argv[i][sizeof("--file=") - 1]);
+    }
+    else if (strncmp(argv[i], "--list=", sizeof("--list=") - 1) == 0)
+    {
+      if (action == Action::NONE)
+      {
+        std::cerr << "--list is only applicable with an action. See --help.\n";
+        return 1;
+      }
+      lists.push_back(&argv[i][sizeof("--list=") - 1]);
     }
     else
     {
@@ -257,27 +268,39 @@ int main(int argc, char *argv[])
 
   if (action == Action::SORT)
   {
+    bool retval = true;
     SetStack set_stack(with_source_only, top_frame, bottom_frame);
 
     for (const std::string &folder : folders)
     {
       if (!set_stack.AddRecursive(folder, nthreads, regex, print_one_by_group))
       {
-        std::cerr << "Failed to read some files in " << folder << "."
+        std::cerr << "Failed to read some files in folder " << folder << "."
                   << std::endl;
-        return 1;
+        retval = false;
       }
     }
     for (const std::string &filename : filenames)
     {
       if (!set_stack.Add(filename, print_one_by_group))
       {
-        std::cerr << "Failed to read " << filename << "." << std::endl;
-        return 1;
+        std::cerr << "Failed to read file " << filename << "." << std::endl;
+        retval = false;
+      }
+    }
+    for (const std::string &list : lists)
+    {
+      if (!set_stack.AddList(list, nthreads, print_one_by_group))
+      {
+        std::cerr << "Failed to read some files in list " << list << "."
+                  << std::endl;
+        retval = false;
       }
     }
 
     set_stack.Print();
+
+    return retval;
   }
   else if (action == Action::GDB)
   {
@@ -314,8 +337,8 @@ int main(int argc, char *argv[])
                                    static_cast<unsigned int>(argc - i - 1),
                                    &argv[i + 1], timeout))
       {
-        std::cerr << "Failed to run gdb with some files in " << folder << "."
-                  << std::endl;
+        std::cerr << "Failed to run gdb with some files in folder " << folder
+                  << "." << std::endl;
         return 1;
       }
     }
@@ -324,7 +347,18 @@ int main(int argc, char *argv[])
       if (!Gdb::RunBtFull(filename, static_cast<unsigned int>(argc - i - 1),
                           &argv[i + 1], timeout))
       {
-        std::cerr << "Failed to read " << filename << "." << std::endl;
+        std::cerr << "Failed to read file " << filename << "." << std::endl;
+        return 1;
+      }
+    }
+    for (const std::string &list : lists)
+    {
+      if (!Gdb::RunBtFullList(list, nthreads,
+                              static_cast<unsigned int>(argc - i - 1),
+                              &argv[i + 1], timeout))
+      {
+        std::cerr << "Failed to run gdb with some files in folder " << list
+                  << "." << std::endl;
         return 1;
       }
     }
