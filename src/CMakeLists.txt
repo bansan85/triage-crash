@@ -2,6 +2,8 @@ if (LIB2LGC_INCLUDE)
   include_directories(${LIB2LGC_INCLUDE}/src)
 endif()
 if (LIB2LGC_LIB)
+  # For protobuf header
+  include_directories(${LIB2LGC_LIB}/src)
   link_directories(${LIB2LGC_LIB}/src)
 endif()
 

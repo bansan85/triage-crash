@@ -19,21 +19,73 @@
  * SOFTWARE.
  */
 
+#include <2lgc/pattern/publisher/connector_direct.h>
+#include <2lgc/pattern/publisher/publisher_base.h>    // IWYU pragma: keep
+#include <2lgc/pattern/publisher/publisher_remote.h>  // IWYU pragma: keep
+#include <2lgc/pattern/publisher/subscriber_direct.h>
+#include <2lgc/poco/gdb.pb.h>
 #include <2lgc/software/gdb/gdb.h>
 #include <2lgc/software/gdb/set_stack.h>
-#include <bits/stdint-intn.h>
+#include <assert.h>
+#include <2lgc/pattern/publisher/connector_direct.cc>
+#include <cstdint>
 #include <cstring>
 #include <iostream>
 #include <limits>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <vector>
+
+template class llgc::pattern::publisher::ConnectorDirect<msg::software::Gdbs>;
 
 enum class Action
 {
   NONE,
   GDB,
   SORT
+};
+
+class SubscriberBase final : public llgc::pattern::publisher::SubscriberDirect
+{
+ public:
+  explicit SubscriberBase(uint32_t id) : SubscriberDirect(id) {}
+
+  void Listen(const std::shared_ptr<const std::string> &message) override
+  {
+    msg::software::Gdbs messages_gdb;
+    assert(messages_gdb.ParseFromString(*message.get()));
+    for (int i = 0; i < messages_gdb.action_size(); i++)
+    {
+      auto gdbi = messages_gdb.action(i);
+      switch (gdbi.data_case())
+      {
+        case msg::software::Gdb::kRunBtFull:
+        {
+          auto run_bt_fulli = gdbi.run_bt_full();
+          for (int j = 0; j < run_bt_fulli.file_size(); j++)
+          {
+            std::cout << "Gdb timeout: " << run_bt_fulli.file(j) << std::endl;
+          }
+          break;
+        }
+        case msg::software::Gdb::kAddStack:
+        {
+          auto add_stacki = gdbi.add_stack();
+          for (int j = 0; j < add_stacki.file_size(); j++)
+          {
+            std::cout << "Failed to read: " << add_stacki.file(j) << std::endl;
+          }
+          break;
+        }
+        case msg::software::Gdb::DATA_NOT_SET:
+        default:
+        {
+          break;
+        }
+      }
+    }
+  }
 };
 
 int main(int argc, char *argv[])
@@ -47,6 +99,15 @@ int main(int argc, char *argv[])
   size_t bottom_frame = 0;
   Action action = Action::NONE;
   std::string regex;
+
+  std::shared_ptr<SubscriberBase> subscriber =
+      std::make_shared<SubscriberBase>(1);
+  std::shared_ptr<
+      llgc::pattern::publisher::ConnectorDirect<msg::software::Gdbs>>
+      connector_gdb = std::make_shared<
+          llgc::pattern::publisher::ConnectorDirect<msg::software::Gdbs>>(
+          subscriber, llgc::software::gdb::Gdb::GetInstanceStatic());
+  assert(connector_gdb->AddSubscriber(msg::software::Gdb::kRunBtFull));
 
   int i;
   for (i = 1; i < argc; i++)
@@ -268,8 +329,16 @@ int main(int argc, char *argv[])
 
   if (action == Action::SORT)
   {
-    bool retval = true;
-    SetStack set_stack(with_source_only, top_frame, bottom_frame);
+    int retval = 0;
+    llgc::software::gdb::SetStack set_stack(with_source_only, top_frame,
+                                            bottom_frame);
+
+    std::shared_ptr<
+        llgc::pattern::publisher::ConnectorDirect<msg::software::Gdbs>>
+        connector_stack = std::make_shared<
+            llgc::pattern::publisher::ConnectorDirect<msg::software::Gdbs>>(
+            subscriber, set_stack.GetInstanceLocal());
+    assert(connector_stack->AddSubscriber(msg::software::Gdb::kAddStack));
 
     for (const std::string &folder : folders)
     {
@@ -277,7 +346,7 @@ int main(int argc, char *argv[])
       {
         std::cerr << "Failed to read some files in folder " << folder << "."
                   << std::endl;
-        retval = false;
+        retval = 1;
       }
     }
     for (const std::string &filename : filenames)
@@ -285,7 +354,7 @@ int main(int argc, char *argv[])
       if (!set_stack.Add(filename, print_one_by_group))
       {
         std::cerr << "Failed to read file " << filename << "." << std::endl;
-        retval = false;
+        retval = 1;
       }
     }
     for (const std::string &list : lists)
@@ -294,7 +363,7 @@ int main(int argc, char *argv[])
       {
         std::cerr << "Failed to read some files in list " << list << "."
                   << std::endl;
-        retval = false;
+        retval = 1;
       }
     }
 
@@ -331,37 +400,42 @@ int main(int argc, char *argv[])
       return 1;
     }
 
+    int retval = 0;
+
     for (const std::string &folder : folders)
     {
-      if (!Gdb::RunBtFullRecursive(folder, nthreads, regex,
-                                   static_cast<unsigned int>(argc - i - 1),
-                                   &argv[i + 1], timeout))
+      if (!llgc::software::gdb::Gdb::RunBtFullRecursive(
+              folder, nthreads, regex, static_cast<unsigned int>(argc - i - 1),
+              &argv[i + 1], timeout))
       {
         std::cerr << "Failed to run gdb with some files in folder " << folder
                   << "." << std::endl;
-        return 1;
+        retval = 1;
       }
     }
     for (const std::string &filename : filenames)
     {
-      if (!Gdb::RunBtFull(filename, static_cast<unsigned int>(argc - i - 1),
-                          &argv[i + 1], timeout))
+      if (!llgc::software::gdb::Gdb::RunBtFull(
+              filename, static_cast<unsigned int>(argc - i - 1), &argv[i + 1],
+              timeout))
       {
         std::cerr << "Failed to read file " << filename << "." << std::endl;
-        return 1;
+        retval = 1;
       }
     }
     for (const std::string &list : lists)
     {
-      if (!Gdb::RunBtFullList(list, nthreads,
-                              static_cast<unsigned int>(argc - i - 1),
-                              &argv[i + 1], timeout))
+      if (!llgc::software::gdb::Gdb::RunBtFullList(
+              list, nthreads, static_cast<unsigned int>(argc - i - 1),
+              &argv[i + 1], timeout))
       {
         std::cerr << "Failed to run gdb with some files in folder " << list
                   << "." << std::endl;
-        return 1;
+        retval = 1;
       }
     }
+
+    return retval;
   }
 
   return 0;

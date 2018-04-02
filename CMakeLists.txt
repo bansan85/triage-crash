@@ -38,6 +38,7 @@ add_custom_target(check)
 if (CHECK_CODE)
   add_custom_command(TARGET check
     COMMAND clang-format -style='{BasedOnStyle: google, BreakBeforeBraces: Custom, BraceWrapping: { AfterClass: true, AfterControlStatement: true, AfterEnum : true, AfterFunction : true, AfterNamespace : true, AfterObjCDeclaration: true, AfterStruct : true, AfterUnion : true, BeforeCatch : true, BeforeElse : true, IndentBraces : false } }' -i ${ALL_SOURCE_FILES}
-    COMMAND cpplint.py --filter=-whitespace/braces,-whitespace/newline ${ALL_SOURCE_FILES}
-    COMMAND cppcheck --check-config --language=c++ --std=c++14 --inconclusive --enable=all -I${LIB2LGC_INCLUDE}/src ${ALL_SOURCE_FILES})
+    #-build/include: implementation of template with template class in source instead of header needs include .cc.
+    COMMAND cpplint.py --filter=-whitespace/braces,-whitespace/newline,-build/include ${ALL_SOURCE_FILES}
+    COMMAND cppcheck --language=c++ --std=c++14 --inconclusive --enable=all -I${LIB2LGC_INCLUDE}/src ${ALL_SOURCE_FILES})
 endif()
