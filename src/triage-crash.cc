@@ -23,6 +23,7 @@
 #include <2lgc/pattern/publisher/publisher_base.h>    // IWYU pragma: keep
 #include <2lgc/pattern/publisher/publisher_remote.h>  // IWYU pragma: keep
 #include <2lgc/pattern/publisher/subscriber_direct.h>
+#include <2lgc/pattern/singleton/singleton_local.h>
 #include <2lgc/poco/gdb.pb.h>
 #include <2lgc/software/gdb/gdb.h>
 #include <2lgc/software/gdb/set_stack.h>
@@ -106,7 +107,7 @@ int main(int argc, char *argv[])
       llgc::pattern::publisher::ConnectorDirect<msg::software::Gdbs>>
       connector_gdb = std::make_shared<
           llgc::pattern::publisher::ConnectorDirect<msg::software::Gdbs>>(
-          subscriber, llgc::software::gdb::Gdb::GetInstanceStatic());
+          subscriber, llgc::software::gdb::Gdb::gdb_server_::GetInstance());
   assert(connector_gdb->AddSubscriber(msg::software::Gdb::kRunBtFull));
 
   int i;
@@ -330,19 +331,18 @@ int main(int argc, char *argv[])
   if (action == Action::SORT)
   {
     int retval = 0;
-    llgc::software::gdb::SetStack set_stack(with_source_only, top_frame,
-                                            bottom_frame);
+    llgc::software::gdb::SetStack set_stack(with_source_only, top_frame, bottom_frame, print_one_by_group);
 
     std::shared_ptr<
         llgc::pattern::publisher::ConnectorDirect<msg::software::Gdbs>>
         connector_stack = std::make_shared<
             llgc::pattern::publisher::ConnectorDirect<msg::software::Gdbs>>(
-            subscriber, set_stack.GetInstanceLocal());
+            subscriber, set_stack.server_.GetInstance());
     assert(connector_stack->AddSubscriber(msg::software::Gdb::kAddStack));
 
     for (const std::string &folder : folders)
     {
-      if (!set_stack.AddRecursive(folder, nthreads, regex, print_one_by_group))
+      if (!set_stack.AddRecursive(folder, nthreads, regex))
       {
         std::cerr << "Failed to read some files in folder " << folder << "."
                   << std::endl;
@@ -351,7 +351,7 @@ int main(int argc, char *argv[])
     }
     for (const std::string &filename : filenames)
     {
-      if (!set_stack.Add(filename, print_one_by_group))
+      if (!set_stack.Add(filename))
       {
         std::cerr << "Failed to read file " << filename << "." << std::endl;
         retval = 1;
@@ -359,7 +359,7 @@ int main(int argc, char *argv[])
     }
     for (const std::string &list : lists)
     {
-      if (!set_stack.AddList(list, nthreads, print_one_by_group))
+      if (!set_stack.AddList(list, nthreads))
       {
         std::cerr << "Failed to read some files in list " << list << "."
                   << std::endl;

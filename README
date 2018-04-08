@@ -4,4 +4,4 @@ cmake -DINCLUDE_GDB=folder ..
 
 For example:
 cmake -DCHECK_CODE=1 -DLIB2LGC_INCLUDE=/home/legarrec/info/programmation/lib2lgc -DLIB2LGC_LIB=/home/legarrec/info/programmation/lib2lgc-build -DCMAKE_CXX_FLAGS="-march=native -O0 -ggdb2 -g2 -pipe -fno-omit-frame-pointer" ..
-CXX=afl-clang++ cmake -DCMAKE_EXE_LINKER_FLAGS="-lgcc_s" -DCMAKE_CXX_FLAGS="-march=native -O0 -ggdb2 -g2 -pipe -fno-omit-frame-pointer" ..
+CC=clang CXX=clang++ cmake -DCMAKE_EXE_LINKER_FLAGS="-lgcc_s" -DCMAKE_CXX_FLAGS="-march=native -O0 -ggdb2 -g2 -pipe -fno-omit-frame-pointer" ..
