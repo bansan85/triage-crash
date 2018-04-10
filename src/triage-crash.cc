@@ -23,9 +23,9 @@
 #include <2lgc/pattern/publisher/publisher_base.h>    // IWYU pragma: keep
 #include <2lgc/pattern/publisher/publisher_remote.h>  // IWYU pragma: keep
 #include <2lgc/pattern/publisher/subscriber_direct.h>
-#include <2lgc/pattern/singleton/singleton_local.h>
 #include <2lgc/poco/gdb.pb.h>
 #include <2lgc/software/gdb/gdb.h>
+#include <2lgc/software/gdb/gdb_server.h>
 #include <2lgc/software/gdb/set_stack.h>
 #include <assert.h>
 #include <2lgc/pattern/publisher/connector_direct.cc>
@@ -61,21 +61,23 @@ class SubscriberBase final : public llgc::pattern::publisher::SubscriberDirect
       auto gdbi = messages_gdb.action(i);
       switch (gdbi.data_case())
       {
-        case msg::software::Gdb::kRunBtFull:
+        case msg::software::Gdb::kRunBtFullTimeOut:
         {
-          auto run_bt_fulli = gdbi.run_bt_full();
-          for (int j = 0; j < run_bt_fulli.file_size(); j++)
+          auto run_bt_full_time_outi = gdbi.run_bt_full_time_out();
+          for (int j = 0; j < run_bt_full_time_outi.file_size(); j++)
           {
-            std::cout << "Gdb timeout: " << run_bt_fulli.file(j) << std::endl;
+            std::cout << "Gdb timeout: " << run_bt_full_time_outi.file(j)
+                      << std::endl;
           }
           break;
         }
-        case msg::software::Gdb::kAddStack:
+        case msg::software::Gdb::kAddStackFailed:
         {
-          auto add_stacki = gdbi.add_stack();
-          for (int j = 0; j < add_stacki.file_size(); j++)
+          auto add_stack_failedi = gdbi.add_stack_failed();
+          for (int j = 0; j < add_stack_failedi.file_size(); j++)
           {
-            std::cout << "Failed to read: " << add_stacki.file(j) << std::endl;
+            std::cout << "Failed to read: " << add_stack_failedi.file(j)
+                      << std::endl;
           }
           break;
         }
@@ -107,8 +109,8 @@ int main(int argc, char *argv[])
       llgc::pattern::publisher::ConnectorDirect<msg::software::Gdbs>>
       connector_gdb = std::make_shared<
           llgc::pattern::publisher::ConnectorDirect<msg::software::Gdbs>>(
-          subscriber, llgc::software::gdb::Gdb::gdb_server_::GetInstance());
-  assert(connector_gdb->AddSubscriber(msg::software::Gdb::kRunBtFull));
+          subscriber, llgc::software::gdb::Gdb::server_.GetInstance());
+  assert(connector_gdb->AddSubscriber(msg::software::Gdb::kRunBtFullTimeOut));
 
   int i;
   for (i = 1; i < argc; i++)
@@ -331,14 +333,15 @@ int main(int argc, char *argv[])
   if (action == Action::SORT)
   {
     int retval = 0;
-    llgc::software::gdb::SetStack set_stack(with_source_only, top_frame, bottom_frame, print_one_by_group);
+    llgc::software::gdb::SetStack set_stack(with_source_only, top_frame,
+                                            bottom_frame, print_one_by_group);
 
     std::shared_ptr<
         llgc::pattern::publisher::ConnectorDirect<msg::software::Gdbs>>
         connector_stack = std::make_shared<
             llgc::pattern::publisher::ConnectorDirect<msg::software::Gdbs>>(
             subscriber, set_stack.server_.GetInstance());
-    assert(connector_stack->AddSubscriber(msg::software::Gdb::kAddStack));
+    assert(connector_stack->AddSubscriber(msg::software::Gdb::kAddStackFailed));
 
     for (const std::string &folder : folders)
     {
