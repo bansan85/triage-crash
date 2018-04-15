@@ -9,8 +9,8 @@ endif()
 
 find_package(Threads)
 
-add_executable(triage-crash triage-crash.cc)
-target_link_libraries(triage-crash 2lgc ${Protobuf_LIBRARIES})
+add_executable(triage_crash triage_crash.cc)
+target_link_libraries(triage_crash 2lgc ${Protobuf_LIBRARIES})
 if (CHECK_CODE)
-  set_target_properties(triage-crash PROPERTIES CMAKE_CXX_INCLUDE_WHAT_YOU_USE ${iwyu_path})
+  set_target_properties(triage_crash PROPERTIES CMAKE_CXX_INCLUDE_WHAT_YOU_USE ${iwyu_path})
 endif()

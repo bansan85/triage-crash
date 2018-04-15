@@ -27,8 +27,8 @@
 #include <2lgc/software/gdb/gdb.h>
 #include <2lgc/software/gdb/gdb_server.h>
 #include <2lgc/software/gdb/set_stack.h>
-#include <assert.h>
 #include <2lgc/pattern/publisher/connector_direct.cc>
+#include <cassert>
 #include <cstdint>
 #include <cstring>
 #include <iostream>
@@ -42,7 +42,7 @@ template class llgc::pattern::publisher::ConnectorDirect<msg::software::Gdbs>;
 
 enum class Action
 {
-  NONE,
+  NONE = 0,
   GDB,
   SORT
 };
@@ -58,12 +58,12 @@ class SubscriberBase final : public llgc::pattern::publisher::SubscriberDirect
     assert(messages_gdb.ParseFromString(*message.get()));
     for (int i = 0; i < messages_gdb.action_size(); i++)
     {
-      auto gdbi = messages_gdb.action(i);
+      const auto &gdbi = messages_gdb.action(i);
       switch (gdbi.data_case())
       {
         case msg::software::Gdb::kRunBtFullTimeOut:
         {
-          auto run_bt_full_time_outi = gdbi.run_bt_full_time_out();
+          const auto &run_bt_full_time_outi = gdbi.run_bt_full_time_out();
           for (int j = 0; j < run_bt_full_time_outi.file_size(); j++)
           {
             std::cout << "Gdb timeout: " << run_bt_full_time_outi.file(j)
@@ -73,7 +73,7 @@ class SubscriberBase final : public llgc::pattern::publisher::SubscriberDirect
         }
         case msg::software::Gdb::kAddStackFailed:
         {
-          auto add_stack_failedi = gdbi.add_stack_failed();
+          const auto &add_stack_failedi = gdbi.add_stack_failed();
           for (int j = 0; j < add_stack_failedi.file_size(); j++)
           {
             std::cout << "Failed to read: " << add_stack_failedi.file(j)
@@ -91,7 +91,7 @@ class SubscriberBase final : public llgc::pattern::publisher::SubscriberDirect
   }
 };
 
-int main(int argc, char *argv[])
+int main(int argc, char *argv[])  // NS
 {
   std::vector<std::string> filenames, folders, lists;
   bool with_source_only = false;
@@ -112,7 +112,7 @@ int main(int argc, char *argv[])
           subscriber, llgc::software::gdb::Gdb::server_.GetInstance());
   assert(connector_gdb->AddSubscriber(msg::software::Gdb::kRunBtFullTimeOut));
 
-  int i;
+  int i;  // NS
   for (i = 1; i < argc; i++)
   {
     if (strcmp(argv[i], "gdb") == 0)
@@ -225,7 +225,7 @@ int main(int argc, char *argv[])
             << "--folder is only applicable with an action. See --help.\n";
         return 1;
       }
-      folders.push_back(&argv[i][sizeof("--folder=") - 1]);
+      folders.emplace_back(&argv[i][sizeof("--folder=") - 1]);
     }
     else if (strncmp(argv[i], "--timeout=", sizeof("--timeout=") - 1) == 0)
     {
@@ -307,7 +307,7 @@ int main(int argc, char *argv[])
         std::cerr << "--file is only applicable with an action. See --help.\n";
         return 1;
       }
-      filenames.push_back(&argv[i][sizeof("--file=") - 1]);
+      filenames.emplace_back(&argv[i][sizeof("--file=") - 1]);
     }
     else if (strncmp(argv[i], "--list=", sizeof("--list=") - 1) == 0)
     {
@@ -316,7 +316,7 @@ int main(int argc, char *argv[])
         std::cerr << "--list is only applicable with an action. See --help.\n";
         return 1;
       }
-      lists.push_back(&argv[i][sizeof("--list=") - 1]);
+      lists.emplace_back(&argv[i][sizeof("--list=") - 1]);
     }
     else
     {
@@ -327,12 +327,12 @@ int main(int argc, char *argv[])
     }
   }
 
-  const unsigned int nthreads =
-      parallel ? std::numeric_limits<unsigned int>::max() : 1;
+  const unsigned int nthreads =                                 // NS
+      parallel ? std::numeric_limits<unsigned int>::max() : 1;  // NS
 
   if (action == Action::SORT)
   {
-    int retval = 0;
+    int retval = 0;  // NS
     llgc::software::gdb::SetStack set_stack(with_source_only, top_frame,
                                             bottom_frame, print_one_by_group);
 
@@ -374,7 +374,7 @@ int main(int argc, char *argv[])
 
     return retval;
   }
-  else if (action == Action::GDB)
+  if (action == Action::GDB)
   {
     if (i == argc)
     {
@@ -382,14 +382,14 @@ int main(int argc, char *argv[])
                 << std::endl;
       return 1;
     }
-    else if (i == argc - 1)
+    if (i == argc - 1)
     {
       std::cerr << "Missing application to run under gdb after -- ."
                 << std::endl;
       return 1;
     }
 
-    int j;
+    int j;  // NS
     for (j = i + 1; j < argc; j++)
     {
       if (strcmp(argv[j], "@@") == 0)
@@ -403,7 +403,7 @@ int main(int argc, char *argv[])
       return 1;
     }
 
-    int retval = 0;
+    int retval = 0;  // NS
 
     for (const std::string &folder : folders)
     {
@@ -443,3 +443,5 @@ int main(int argc, char *argv[])
 
   return 0;
 }
+
+/* vim:set shiftwidth=2 softtabstop=2 expandtab: */
