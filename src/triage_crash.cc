@@ -52,7 +52,7 @@ class SubscriberBase final : public llgc::pattern::publisher::SubscriberDirect
  public:
   explicit SubscriberBase(uint32_t id) : SubscriberDirect(id) {}
 
-  void Listen(const std::shared_ptr<const std::string> &message) override
+  void Listen(std::shared_ptr<const std::string> message) override
   {
     msg::software::Gdbs messages_gdb;
     assert(messages_gdb.ParseFromString(*message.get()));
