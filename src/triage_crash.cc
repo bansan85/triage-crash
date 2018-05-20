@@ -20,8 +20,6 @@
  */
 
 #include <2lgc/pattern/publisher/connector_direct.h>
-#include <2lgc/pattern/publisher/publisher_direct.h>
-#include <2lgc/pattern/publisher/publisher_interface.h>
 #include <2lgc/pattern/publisher/subscriber_direct.h>
 #include <2lgc/poco/software_gdb.pb.h>
 #include <2lgc/software/gdb/gdb.h>
@@ -38,10 +36,23 @@
 #include <vector>
 
 #include <2lgc/pattern/publisher/connector_direct.cc>
+#include <2lgc/pattern/publisher/connector_interface.cc>
+#include <2lgc/pattern/publisher/publisher_interface.cc>
 #include <2lgc/pattern/publisher/subscriber_direct.cc>
+#include <2lgc/pattern/singleton.cc>
 
-template class llgc::pattern::publisher::SubscriberDirect<llgc::protobuf::software::Gdb>;
-template class llgc::pattern::publisher::ConnectorDirect<llgc::protobuf::software::Gdb>;
+template class llgc::pattern::publisher::SubscriberDirect<
+    llgc::protobuf::software::Gdb>;
+template class llgc::pattern::publisher::ConnectorDirect<
+    llgc::protobuf::software::Gdb>;
+template class llgc::pattern::publisher::PublisherInterface<
+    llgc::protobuf::software::Gdb,
+    std::weak_ptr<llgc::pattern::publisher::ConnectorInterface<
+        llgc::protobuf::software::Gdb>>>;
+template class llgc::pattern::Singleton<
+    llgc::pattern::publisher::PublisherDirect<llgc::protobuf::software::Gdb>>;
+template class llgc::pattern::publisher::ConnectorInterface<
+    llgc::protobuf::software::Gdb>;
 
 enum class Action
 {
@@ -50,12 +61,13 @@ enum class Action
   SORT
 };
 
-class SubscriberBase final : public llgc::pattern::publisher::SubscriberDirect<llgc::protobuf::software::Gdb>
+class SubscriberBase final : public llgc::pattern::publisher::SubscriberDirect<
+                                 llgc::protobuf::software::Gdb>
 {
  public:
   explicit SubscriberBase(uint32_t id) : SubscriberDirect(id) {}
 
-  bool Listen(const llgc::protobuf::software::Gdb& messages) override
+  bool Listen(const llgc::protobuf::software::Gdb &messages) override
   {
     for (int i = 0; i < messages.msg_size(); i++)
     {
@@ -89,6 +101,8 @@ class SubscriberBase final : public llgc::pattern::publisher::SubscriberDirect<l
         }
       }
     }
+
+    return true;
   }
 };
 
@@ -105,8 +119,11 @@ int main(int argc, char *argv[])  // NS
   std::string regex;
 
   auto subscriber = std::make_shared<SubscriberBase>(1);
-  auto connector_gdb = std::make_shared<llgc::pattern::publisher::ConnectorDirect<llgc::protobuf::software::Gdb>>(subscriber, llgc::software::gdb::Gdb::server_.GetInstance());
-  assert(connector_gdb->AddSubscriber(llgc::protobuf::software::Gdb_Msg::kRunBtFullTimeOut));
+  auto connector_gdb = std::make_shared<
+      llgc::pattern::publisher::ConnectorDirect<llgc::protobuf::software::Gdb>>(
+      subscriber, llgc::software::gdb::Gdb::server_.GetInstance());
+  assert(connector_gdb->AddSubscriber(
+      llgc::protobuf::software::Gdb_Msg::kRunBtFullTimeOut));
 
   int i;  // NS
   for (i = 1; i < argc; i++)
@@ -332,8 +349,12 @@ int main(int argc, char *argv[])  // NS
     llgc::software::gdb::SetStack set_stack(with_source_only, top_frame,
                                             bottom_frame, print_one_by_group);
 
-    auto connector_stack = std::make_shared<llgc::pattern::publisher::ConnectorDirect<llgc::protobuf::software::Gdb>>(subscriber, set_stack.server_.GetInstance());
-    assert(connector_stack->AddSubscriber(llgc::protobuf::software::Gdb_Msg::kAddStackFailed));
+    auto connector_stack =
+        std::make_shared<llgc::pattern::publisher::ConnectorDirect<
+            llgc::protobuf::software::Gdb>>(subscriber,
+                                            set_stack.server_.GetInstance());
+    assert(connector_stack->AddSubscriber(
+        llgc::protobuf::software::Gdb_Msg::kAddStackFailed));
 
     for (const std::string &folder : folders)
     {
