@@ -20,14 +20,13 @@
  */
 
 #include <2lgc/pattern/publisher/connector_direct.h>
-#include <2lgc/pattern/publisher/publisher_base.h>    // IWYU pragma: keep
-#include <2lgc/pattern/publisher/publisher_remote.h>  // IWYU pragma: keep
+#include <2lgc/pattern/publisher/publisher_direct.h>
+#include <2lgc/pattern/publisher/publisher_interface.h>
 #include <2lgc/pattern/publisher/subscriber_direct.h>
-#include <2lgc/poco/gdb.pb.h>
+#include <2lgc/poco/software_gdb.pb.h>
 #include <2lgc/software/gdb/gdb.h>
 #include <2lgc/software/gdb/gdb_server.h>
 #include <2lgc/software/gdb/set_stack.h>
-#include <2lgc/pattern/publisher/connector_direct.cc>
 #include <cassert>
 #include <cstdint>
 #include <cstring>
@@ -38,7 +37,11 @@
 #include <string>
 #include <vector>
 
-template class llgc::pattern::publisher::ConnectorDirect<msg::software::Gdbs>;
+#include <2lgc/pattern/publisher/connector_direct.cc>
+#include <2lgc/pattern/publisher/subscriber_direct.cc>
+
+template class llgc::pattern::publisher::SubscriberDirect<llgc::protobuf::software::Gdb>;
+template class llgc::pattern::publisher::ConnectorDirect<llgc::protobuf::software::Gdb>;
 
 enum class Action
 {
@@ -47,21 +50,19 @@ enum class Action
   SORT
 };
 
-class SubscriberBase final : public llgc::pattern::publisher::SubscriberDirect
+class SubscriberBase final : public llgc::pattern::publisher::SubscriberDirect<llgc::protobuf::software::Gdb>
 {
  public:
   explicit SubscriberBase(uint32_t id) : SubscriberDirect(id) {}
 
-  void Listen(std::shared_ptr<const std::string> message) override
+  bool Listen(const llgc::protobuf::software::Gdb& messages) override
   {
-    msg::software::Gdbs messages_gdb;
-    assert(messages_gdb.ParseFromString(*message.get()));
-    for (int i = 0; i < messages_gdb.action_size(); i++)
+    for (int i = 0; i < messages.msg_size(); i++)
     {
-      const auto &gdbi = messages_gdb.action(i);
+      const auto &gdbi = messages.msg(i);
       switch (gdbi.data_case())
       {
-        case msg::software::Gdb::kRunBtFullTimeOut:
+        case llgc::protobuf::software::Gdb_Msg::kRunBtFullTimeOut:
         {
           const auto &run_bt_full_time_outi = gdbi.run_bt_full_time_out();
           for (int j = 0; j < run_bt_full_time_outi.file_size(); j++)
@@ -71,7 +72,7 @@ class SubscriberBase final : public llgc::pattern::publisher::SubscriberDirect
           }
           break;
         }
-        case msg::software::Gdb::kAddStackFailed:
+        case llgc::protobuf::software::Gdb_Msg::kAddStackFailed:
         {
           const auto &add_stack_failedi = gdbi.add_stack_failed();
           for (int j = 0; j < add_stack_failedi.file_size(); j++)
@@ -81,7 +82,7 @@ class SubscriberBase final : public llgc::pattern::publisher::SubscriberDirect
           }
           break;
         }
-        case msg::software::Gdb::DATA_NOT_SET:
+        case llgc::protobuf::software::Gdb_Msg::DATA_NOT_SET:
         default:
         {
           break;
@@ -103,14 +104,9 @@ int main(int argc, char *argv[])  // NS
   Action action = Action::NONE;
   std::string regex;
 
-  std::shared_ptr<SubscriberBase> subscriber =
-      std::make_shared<SubscriberBase>(1);
-  std::shared_ptr<
-      llgc::pattern::publisher::ConnectorDirect<msg::software::Gdbs>>
-      connector_gdb = std::make_shared<
-          llgc::pattern::publisher::ConnectorDirect<msg::software::Gdbs>>(
-          subscriber, llgc::software::gdb::Gdb::server_.GetInstance());
-  assert(connector_gdb->AddSubscriber(msg::software::Gdb::kRunBtFullTimeOut));
+  auto subscriber = std::make_shared<SubscriberBase>(1);
+  auto connector_gdb = std::make_shared<llgc::pattern::publisher::ConnectorDirect<llgc::protobuf::software::Gdb>>(subscriber, llgc::software::gdb::Gdb::server_.GetInstance());
+  assert(connector_gdb->AddSubscriber(llgc::protobuf::software::Gdb_Msg::kRunBtFullTimeOut));
 
   int i;  // NS
   for (i = 1; i < argc; i++)
@@ -336,12 +332,8 @@ int main(int argc, char *argv[])  // NS
     llgc::software::gdb::SetStack set_stack(with_source_only, top_frame,
                                             bottom_frame, print_one_by_group);
 
-    std::shared_ptr<
-        llgc::pattern::publisher::ConnectorDirect<msg::software::Gdbs>>
-        connector_stack = std::make_shared<
-            llgc::pattern::publisher::ConnectorDirect<msg::software::Gdbs>>(
-            subscriber, set_stack.server_.GetInstance());
-    assert(connector_stack->AddSubscriber(msg::software::Gdb::kAddStackFailed));
+    auto connector_stack = std::make_shared<llgc::pattern::publisher::ConnectorDirect<llgc::protobuf::software::Gdb>>(subscriber, set_stack.server_.GetInstance());
+    assert(connector_stack->AddSubscriber(llgc::protobuf::software::Gdb_Msg::kAddStackFailed));
 
     for (const std::string &folder : folders)
     {

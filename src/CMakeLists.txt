@@ -10,7 +10,7 @@ endif()
 find_package(Threads)
 
 add_executable(triage_crash triage_crash.cc)
-target_link_libraries(triage_crash 2lgc ${Protobuf_LIBRARIES})
+target_link_libraries(triage_crash 2lgc ${Protobuf_LIBRARIES} ${OPENSSL_CRYPTO_LIBRARY})
 if (CHECK_CODE)
   set_target_properties(triage_crash PROPERTIES CMAKE_CXX_INCLUDE_WHAT_YOU_USE ${iwyu_path})
 endif()
