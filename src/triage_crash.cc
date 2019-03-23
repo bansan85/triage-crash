@@ -20,7 +20,9 @@
  */
 
 #include <2lgc/pattern/publisher/connector_direct.h>
-#include <2lgc/pattern/publisher/subscriber_direct.h>
+#include <2lgc/pattern/publisher/publisher_direct.h>
+#include <2lgc/pattern/publisher/subscriber_interface.h>
+#include <2lgc/pattern/publisher/subscriber_local.h>
 #include <2lgc/poco/software_gdb.pb.h>
 #include <2lgc/software/gdb/gdb.h>
 #include <2lgc/software/gdb/gdb_server.h>
@@ -38,10 +40,13 @@
 #include <2lgc/pattern/publisher/connector_direct.cc>
 #include <2lgc/pattern/publisher/connector_interface.cc>
 #include <2lgc/pattern/publisher/publisher_interface.cc>
-#include <2lgc/pattern/publisher/subscriber_direct.cc>
+#include <2lgc/pattern/publisher/subscriber_interface.cc>
+#include <2lgc/pattern/publisher/subscriber_local.cc>
 #include <2lgc/pattern/singleton.cc>
 
-template class llgc::pattern::publisher::SubscriberDirect<
+template class llgc::pattern::publisher::SubscriberInterface<
+    llgc::protobuf::software::Gdb>;
+template class llgc::pattern::publisher::SubscriberLocal<
     llgc::protobuf::software::Gdb>;
 template class llgc::pattern::publisher::ConnectorDirect<
     llgc::protobuf::software::Gdb>;
@@ -61,11 +66,12 @@ enum class Action
   SORT
 };
 
-class SubscriberBase final : public llgc::pattern::publisher::SubscriberDirect<
-                                 llgc::protobuf::software::Gdb>
+class SubscriberBase final :
+  public llgc::pattern::publisher::SubscriberLocal<
+    llgc::protobuf::software::Gdb>
 {
  public:
-  explicit SubscriberBase(uint32_t id) : SubscriberDirect(id) {}
+  explicit SubscriberBase(uint32_t id) : SubscriberLocal(id) {}
 
   bool Listen(const llgc::protobuf::software::Gdb &messages) override
   {
